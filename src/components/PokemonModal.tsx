@@ -57,7 +57,7 @@ const PokemonModal: React.FC<PokemonModalProps> = ({
 }) => {
   const [currentTab, setCurrentTab] = useState('about')
 
-  function handleTabChange(event: React.SyntheticEvent, newValue: string) {
+  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
     setCurrentTab(newValue)
   }
 

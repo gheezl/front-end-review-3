@@ -4,7 +4,7 @@ import PokemonProvider from './components/Contexts/PokemonProvider';
 import Home from './pages/Home';
 import { baseTheme } from './theme';
 
-function App() {
+const App = () => {
   return (
     <ThemeProvider theme={baseTheme}>
       <PokemonProvider>

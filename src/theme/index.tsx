@@ -322,7 +322,7 @@ export const greyTheme = createTheme(baseTheme, {
   }
 })
 
-export function getTheme(type: PokemonType) {
+export const getTheme = (type: PokemonType) => {
   switch (type) {
     case PokemonType.bug:
     case PokemonType.flying:

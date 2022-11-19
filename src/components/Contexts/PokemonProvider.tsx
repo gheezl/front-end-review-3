@@ -66,14 +66,21 @@ const PokemonProvider: React.FC<PokemonProviderProps> = ({ children }) => {
   const [error, setError] = useState<any>()
 
   useEffect(() => {
+    
     fetchPokemon()
   }, [])
 
   useEffect(() => {
-    filterData()
+    let isMounted = true
+
+    if (isMounted) {
+      filterData(isMounted)
+    }
+    
+    return () => {isMounted = false}
   }, [filters, query, data])
 
-  const filterData = async () => {
+  const filterData = async (isMounted: boolean) => {
     if (!data) {
       return
     }
@@ -110,7 +117,9 @@ const PokemonProvider: React.FC<PokemonProviderProps> = ({ children }) => {
       }
     })
 
-    setPokemon(filteredData)
+    if (isMounted) {
+      setPokemon(filteredData)
+    }
   }
 
   const fetchPokemon = async () => {
@@ -127,20 +136,20 @@ const PokemonProvider: React.FC<PokemonProviderProps> = ({ children }) => {
     setQuery(query)
   }
 
-  function addFavourite(pokemon: INamedApiResource<IPokemon>) {
+  const addFavourite = (pokemon: INamedApiResource<IPokemon>) => {
     setFavourites([...favourites, pokemon.name])
   }
 
-  function removeFavourite(pokemon: INamedApiResource<IPokemon>) {
+  const removeFavourite = (pokemon: INamedApiResource<IPokemon>) => {
     setFavourites(favourites.filter((favourite) => favourite !== pokemon.name))
   }
 
-  function addFilter(field: Field, value: FilterValue) {
+  const addFilter = (field: Field, value: FilterValue) => {
     const newFilters = {...filters, [field]: value}
     setFilters(newFilters)
   }
 
-  function removeFilter(field: Field) {
+  const removeFilter = (field: Field) => {
     const newFilters = {...filters}
     newFilters[field] = undefined
     setFilters(newFilters)

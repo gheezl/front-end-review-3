@@ -17,7 +17,7 @@ const Home: React.FC = () => {
     removeFilter,
   } = usePokemonContext()
 
-  function handleQueryChange(event: ChangeEvent<HTMLInputElement>) {
+  const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
     search(event.target.value)
   }
 

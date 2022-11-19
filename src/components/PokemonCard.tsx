@@ -48,15 +48,23 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
 
   useEffect(() => {
+    let isMounted = true
+
     if (!ref.current) {
       return
     }
 
     const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting)
+      ([entry]) => {
+        if (isMounted) {
+          setIsVisible(entry.isIntersecting)
+        } 
+      }
     )
 
     observer.observe(ref.current)
+    
+    return () => {isMounted = false}
   }, [ref.current])
 
   useEffect(() => {
@@ -65,112 +73,120 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       return
     }
 
+    getPokemonData()
+    
+  }, [isVisible, pokemon.url])
+
+  const getPokemonData = () => {
     PokeAPI.Pokemon.resolve(name)
-      .then((pokemon) => {
-        const types = pokemon.types.map((type) => type.type.name)
-        const abilities = pokemon.abilities.map((ability) => ability.ability.name.replace('-', ' '))
-        const theme = getTheme(types[0] as PokemonType)
+    .then((pokemon) => {
+      const types = pokemon.types.map((type) => type.type.name)
+      const abilities = pokemon.abilities.map((ability) => ability.ability.name.replace('-', ' '))
+      const theme = getTheme(types[0] as PokemonType)
 
-        setTypes(types as PokemonType[])
-        setTheme(theme)
-        setExperience(pokemon.base_experience)
-        setHeight(pokemon.height)
-        setWeight(pokemon.weight)
-        setAbilities(abilities)
+      setTypes(types as PokemonType[])
+      setTheme(theme)
+      setExperience(pokemon.base_experience)
+      setHeight(pokemon.height)
+      setWeight(pokemon.weight)
+      setAbilities(abilities)
 
-        for (const stat of pokemon.stats) {
-          switch (stat.stat.name) {
-            case PokemonStat.hp:
-              setHp(stat.base_stat)
-              break
+      for (const stat of pokemon.stats) {
+        switch (stat.stat.name) {
+          case PokemonStat.hp:
+            setHp(stat.base_stat)
+            break
 
-            case PokemonStat.attack:
-              setAttack(stat.base_stat)
-              break
+          case PokemonStat.attack:
+            setAttack(stat.base_stat)
+            break
 
-            case PokemonStat.defense:
-              setDefense(stat.base_stat)
-              break
+          case PokemonStat.defense:
+            setDefense(stat.base_stat)
+            break
 
-            case PokemonStat.specialAttack:
-              setSpecialAttack(stat.base_stat)
-              break
+          case PokemonStat.specialAttack:
+            setSpecialAttack(stat.base_stat)
+            break
 
-            case PokemonStat.specialDefense:
-              setSpecialDefense(stat.base_stat)
-              break
+          case PokemonStat.specialDefense:
+            setSpecialDefense(stat.base_stat)
+            break
 
-            case PokemonStat.speed:
-              setSpeed(stat.base_stat)
-              break
-          }
+          case PokemonStat.speed:
+            setSpeed(stat.base_stat)
+            break
         }
+      }
 
-        const moves = pokemon.moves
-          .filter((resource) => {
-            return resource.version_group_details.some((version) => version.version_group.name === 'emerald')
-          })
-          .map((resource) => {
-            const version = resource.version_group_details.find((version) => version.version_group.name === 'emerald')
+      const moves = pokemon.moves
+        .filter((resource) => {
+          return resource.version_group_details.some((version) => version.version_group.name === 'emerald')
+        })
+        .map((resource) => {
+          const version = resource.version_group_details.find((version) => version.version_group.name === 'emerald')
 
-            return {
-              name: resource.move.name.replace('-', ' '),
-              level: version!.level_learned_at
-            }
-          })
-          .sort((a, b) => {
-            if (a.level === b.level) {
-              return 0
-            } else if (a.level > b.level) {
-              return 1
-            } else {
-              return -1
-            }
-          })
+          return {
+            name: resource.move.name.replace('-', ' '),
+            level: version!.level_learned_at
+          }
+        })
+        .sort((a, b) => {
+          if (a.level === b.level) {
+            return 0
+          } else if (a.level > b.level) {
+            return 1
+          } else {
+            return -1
+          }
+        })
 
         setMoves(moves)
 
-        return PokeAPI.PokemonSpecies.resolve(pokemon.species.name)
-      })
-      .then((species) => {
-        const description = species.flavor_text_entries.find((flavor) => flavor.language.name === 'en' && flavor.version.name === 'emerald')
-        setDescription(description?.flavor_text)
+      return PokeAPI.PokemonSpecies.resolve(pokemon.species.name)
+    })
+    .then((species) => {
+      const description = species.flavor_text_entries.find((flavor) => flavor.language.name === 'en' && flavor.version.name === 'emerald')
+      setDescription(description?.flavor_text)
 
-        const id = getIdFromUrl(species.evolution_chain.url)
+      const id = getIdFromUrl(species.evolution_chain.url)
 
-        return PokeAPI.EvolutionChain.resolve(id)
-      })
-      .then((evolutions) => {
-        const chain: IChainLink[] = []
-        let link: IChainLink | undefined = evolutions.chain
-        recurse(link)
+      return PokeAPI.EvolutionChain.resolve(id)
+    })
+    .then((evolutions) => {
+      const chain: IChainLink[] = []
+      let link: IChainLink | undefined = evolutions.chain
+      recurse(link)
 
-        function recurse(link: IChainLink) {
-          // only respect the OG pokemon
-          if (!link.evolves_to.length) {
-            return
-          }
-
-          link.evolves_to = link.evolves_to.filter((link) => isOG(link.species.url))
-
-          // in some cases, non-OG pokemon evolve into OG pokemon (like Pichu)
-          // don't include non-OG pokemon in our chain, but still process
-          // their evolutions
-          if (isOG(link.species.url)) {
-            chain.push(link)
-          }
-
-          for (const child of link.evolves_to) {
-            recurse(child)
-          }
+      function recurse(link: IChainLink) {
+        // only respect the OG pokemon
+        if (!link.evolves_to.length) {
+          return
         }
 
-        setEvolutions(chain)
-      })
-      .finally(() => setLoading(false))
-  }, [isVisible, pokemon.url])
+        link.evolves_to = link.evolves_to.filter((link) => isOG(link.species.url))
 
-  function handleToggleFavourite() {
+        // in some cases, non-OG pokemon evolve into OG pokemon (like Pichu)
+        // don't include non-OG pokemon in our chain, but still process
+        // their evolutions
+        if (isOG(link.species.url)) {
+          chain.push(link)
+        }
+
+        for (const child of link.evolves_to) {
+          recurse(child)
+        }
+      }
+
+        setEvolutions(chain)
+    })
+    .finally(() => {
+          setLoading(false)
+      }
+    )
+  }
+
+  const handleToggleFavourite = () => {
     if (isFavourite) {
       onRemoveFavourite()
     } else {
@@ -178,11 +194,11 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     }
   }
 
-  function handleCardClick() {
+  const handleCardClick = () => {
     setIsDialogOpen(true)
   }
 
-  function handleCloseDialog() {
+  const handleCloseDialog = () => {
     setIsDialogOpen(false)
   }
 
